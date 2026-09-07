@@ -5680,7 +5680,7 @@ jobs:
           retention-days: 90
 
   # -------------------------------------------------------------------------
-  # data/priority_queue.h — REPORT-ONLY (VERIFY-022; runs 0-4 at CI #1281-#1285,
+  # data/priority_queue.h — ENFORCED (VERIFY-022; runs 0-7 at CI #1281-#1289,
   # run 6 = 7 own; commit 7 closes the last one that was pq's, run 7 pending)
   #
   # Shape: verified IN PLACE, no cover TU and no driver. The 40 non-macro
@@ -5764,7 +5764,7 @@ jobs:
       - name: "WP: data/priority_queue.h (VERIFY-022, report-only, Typed+Cast)"
         run: |
           eval $(opam env --switch=frama-c)
-          ENFORCE=0
+          ENFORCE=1
           # Typed+Cast, NOT Typed. The closure includes ptr.h, compare.h,
           # slice.h and memory.h, all verified at home under Typed+Cast and
           # all cast-originating (sint8* <-> uint8* at every byte-view site).
@@ -5795,7 +5795,7 @@ jobs:
           echo ""
           echo "==============================================="
           echo "  WP (priority_queue.h) exit: ${WP_EXIT}"
-          echo "  MODE: report-only (ENFORCE=${ENFORCE})  MODEL: ${WP_MODEL}"
+          if [ "${ENFORCE}" -eq 1 ]; then echo "  MODE: ENFORCED (VERIFY-022, pinned at CI #1289)  MODEL: ${WP_MODEL}"; else echo "  MODE: report-only (ENFORCE=${ENFORCE})  MODEL: ${WP_MODEL}"; fi
           echo "==============================================="
           PROVED_LINE=$(grep -E "^\[wp\] Proved goals:" wp_pq_output.txt || true)
           if [ -z "${PROVED_LINE}" ]; then
@@ -6069,10 +6069,103 @@ jobs:
             comm -23 /tmp/pq_resid.txt /tmp/covered_s.txt | sed 's/^/      /'
           fi
           echo ""
-          echo "REPORT-ONLY: nothing pinned. Record this run against ARMs A-E"
-          echo "      in VERIFY-022 before interpreting any of it. Do NOT"
-          echo "      promote until name-stable across repeated runs."
-          echo "==============================================="
+          if [ "${ENFORCE}" -eq 1 ]; then
+            # ===============================================================
+            # ENFORCED as of VERIFY-022 commit 8, pinned at CI #1289 (run 7).
+            # Seven commits, seven runs: 199, 170, 143, 144, 18, 7, 6 own.
+            # Three count predictions refuted (< 60, < 90, < 130); the
+            # comparator-boundary and separation-class predictions held.
+            #
+            # The 71-name residual set = 43 inherited from memory.h (taken
+            # from the memory job's own list at run time, so the two pins
+            # cannot drift apart silently) + 22 result(bool, Error) + 6 own:
+            #   1  \\valid_function(pq->cmp)             -- Frama-C 29 limit
+            #   5  !regions_overlap at mem_copy x4 / mem_swap x1 -- memory.h
+            #      states the predicate by pointer ORDERING, which \\separated
+            #      cannot discharge across bases: VERIFY-024 candidate.
+            # THIS is the name-stability run: CI #1289 is the first
+            # measurement at this contract state, and the enforcing run is
+            # the second. If it goes red with no header change, the pin is
+            # flaky and that is the finding -- deque's run-2 shape.
+            # ===============================================================
+            EXPECTED_PROVED="4513 / 4584"
+            EXPECTED_UNPROVED=71
+            PIN_NAMES=(
+            "typed_cast_result_Bool_Error_and_then_assert_rte_function_pointer"
+            "typed_cast_result_Bool_Error_and_then_terminates_part1"
+            "typed_cast_result_Bool_Error_and_then_terminates_part2"
+            "typed_cast_result_Bool_Error_eq_assert_rte_function_pointer"
+            "typed_cast_result_Bool_Error_eq_assert_rte_function_pointer_2"
+            "typed_cast_result_Bool_Error_eq_terminates_part1"
+            "typed_cast_result_Bool_Error_eq_terminates_part2"
+            "typed_cast_result_Bool_Error_eq_terminates_part3"
+            "typed_cast_result_Bool_Error_eq_terminates_part4"
+            "typed_cast_result_Bool_Error_get_err_assert_rte_mem_access"
+            "typed_cast_result_Bool_Error_get_ok_assert_rte_mem_access"
+            "typed_cast_result_Bool_Error_map_assert_rte_function_pointer"
+            "typed_cast_result_Bool_Error_map_err_assert_rte_function_pointer"
+            "typed_cast_result_Bool_Error_map_err_exits"
+            "typed_cast_result_Bool_Error_map_err_terminates_part2"
+            "typed_cast_result_Bool_Error_map_err_terminates_part3"
+            "typed_cast_result_Bool_Error_map_exits"
+            "typed_cast_result_Bool_Error_map_terminates_part2"
+            "typed_cast_result_Bool_Error_map_terminates_part3"
+            "typed_cast_result_Bool_Error_or_else_assert_rte_function_pointer"
+            "typed_cast_result_Bool_Error_or_else_terminates_part1"
+            "typed_cast_result_Bool_Error_or_else_terminates_part2"
+            "typed_cast_pq_cmp_assert_rte_function_pointer"
+            "typed_cast_pq_swap__call_mem_swap_requires_2"
+            "typed_cast_pq_push_result_call_mem_copy_requires_3"
+            "typed_cast_pq_pop_raw_call_mem_copy_requires_3"
+            "typed_cast_pq_remove_at_result_call_mem_copy_requires_3"
+            "typed_cast_pq_peek_call_mem_copy_requires_3"
+            )
+            FAILURES=0
+            PROVED_COUNT=$(printf '%s' "${PROVED_LINE}" | sed -E 's/^.*Proved goals: *//; s/[[:space:]]+$//')
+            if [ "${PROVED_COUNT}" != "${EXPECTED_PROVED}" ]; then
+              echo "FAIL: proved-goal summary ${PROVED_COUNT} != pinned ${EXPECTED_PROVED}."
+              echo "      Reclassify in VERIFY-022, then ratchet this pin and the"
+              echo "      PIN_NAMES list together in one acknowledged commit."
+              FAILURES=$((FAILURES+1))
+            fi
+            if [ "${FAILED_COUNT}" -ne 0 ]; then
+              echo "FAIL: ${FAILED_COUNT} Failed goal(s) -- a REAL finding, never pinnable."
+              FAILURES=$((FAILURES+1))
+            fi
+            printf '%s\n' "${PIN_NAMES[@]}" | sort -u > /tmp/pq_pin_own.txt
+            sort -u /tmp/mem_checks.txt /tmp/pq_pin_own.txt > /tmp/pq_pin_all.txt
+            PIN_N=$(wc -l < /tmp/pq_pin_all.txt)
+            comm -23 /tmp/pq_pin_all.txt /tmp/pq_resid.txt > /tmp/pq_missing.txt
+            comm -13 /tmp/pq_pin_all.txt /tmp/pq_resid.txt > /tmp/pq_unpinned.txt
+            echo "  --- Roll-call (set equality, ${PIN_N} pinned = 43 memory + 22 result + 6 own) ---"
+            echo "    missing (pinned, now proved):    $(wc -l < /tmp/pq_missing.txt)"; sed 's/^/      /' /tmp/pq_missing.txt
+            echo "    unpinned (new, unproved):        $(wc -l < /tmp/pq_unpinned.txt)"; sed 's/^/      /' /tmp/pq_unpinned.txt
+            if [ "${PIN_N}" -ne "${EXPECTED_UNPROVED}" ]; then
+              echo "FAIL: pin list has ${PIN_N} names, EXPECTED_UNPROVED is ${EXPECTED_UNPROVED} -- the job is inconsistent."
+              FAILURES=$((FAILURES+1))
+            fi
+            if [ -s /tmp/pq_missing.txt ] || [ -s /tmp/pq_unpinned.txt ]; then
+              echo "FAIL: residual set differs from the pin by name."
+              echo "        missing  -> a pinned residual now proves: RATCHET."
+              echo "        unpinned -> a NEW residual appeared: INVESTIGATE."
+              echo "        both     -> a goal oscillates across runs; the pin"
+              echo "                    is flaky and that is the finding."
+              FAILURES=$((FAILURES+1))
+            fi
+            if [ "${FAILURES}" -eq 0 ]; then
+              echo "PASS: priority_queue.h verified -- ${PROVED_COUNT} proved, ${EXPECTED_UNPROVED}"
+              echo "      residuals all observed by name (VERIFY-022)."
+            else
+              echo "VERIFY-022 ENFORCED FAIL: ${FAILURES} check(s) above."
+            fi
+            echo "==============================================="
+            if [ "${FAILURES}" -ne 0 ]; then exit 1; fi
+          else
+            echo "REPORT-ONLY: nothing pinned. Record this run against ARMs A-E"
+            echo "      in VERIFY-022 before interpreting any of it. Do NOT"
+            echo "      promote until name-stable across repeated runs."
+            echo "==============================================="
+          fi
       - name: Upload WP proof output (priority_queue.h)
         if: always()
         uses: actions/upload-artifact@v6
