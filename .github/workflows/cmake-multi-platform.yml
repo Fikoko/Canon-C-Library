@@ -7322,7 +7322,73 @@ jobs:
               ls "$d"/*vec_cover* 2>/dev/null || true
             done
           fi
-        
+      - name: "Debug: per-line MC/DC detail for priority_queue.h"
+        # Added 2026-09-07 with MCDC-014. priority_queue.h reached 81/82 (MCDC-014); the one
+        # remaining outcome is J1, pq_swap_'s a == b guard, dead by construction
+        # after PQ-A. Any OTHER miss printed here is a regression.
+        # Report-only, like the fourteen steps above it: the justification
+        # register for this file lives in deviations.md (the MCDC entry's
+        # table), is checked by hand against this dump before a release cut,
+        # and automating that check -- one file:line allowlist per graduated
+        # file, failing on any unexplained miss -- is recorded future work,
+        # not an existing mechanism. Never fails.
+        run: |
+          cd build
+          GCDA=$(find . -name "priority_queue_test*.gcda" | head -1)
+          if [ -z "$GCDA" ]; then
+            echo "ERROR: could not locate priority_queue_test gcda file"
+            find . -name "*.gcda" | head -20
+            exit 0   # report-only -- do not fail the coverage job
+          fi
+          echo "Running gcov on: $GCDA"
+          gcov-14 --conditions --all-blocks "$GCDA" 2>&1 | \
+            grep -A 200 "priority_queue.h" | head -500
+          echo ""
+          GCOV=$(find . -name "priority_queue.h.gcov" | head -1)
+          if [ -n "$GCOV" ]; then
+            echo "=== Full contents of $GCOV ==="
+            cat "$GCOV"
+            echo ""
+            echo "=== Condition outcomes not fully covered in priority_queue.h ==="
+            grep -nE "condition outcomes covered [0-9]+/[0-9]+" "$GCOV" | awk -F'[ /]' '$(NF-1)!=$NF' || echo "  (none -- every condition fully covered)"
+          else
+            echo "No priority_queue.h.gcov file generated"
+          fi
+
+      - name: "Debug: per-line MC/DC detail for lifetime.h"
+        # Added 2026-09-07 with MCDC-014. lifetime.h is 1/2 (MCDC-013); the one remaining outcome is
+        # the REGION_ID_STATIC guard's TRUE leg, platform-dead on the runner.
+        # Any OTHER miss printed here is a regression.
+        # Report-only, like the fourteen steps above it: the justification
+        # register for this file lives in deviations.md (the MCDC entry's
+        # table), is checked by hand against this dump before a release cut,
+        # and automating that check -- one file:line allowlist per graduated
+        # file, failing on any unexplained miss -- is recorded future work,
+        # not an existing mechanism. Never fails.
+        run: |
+          cd build
+          GCDA=$(find . -name "lifetime_test*.gcda" | head -1)
+          if [ -z "$GCDA" ]; then
+            echo "ERROR: could not locate lifetime_test gcda file"
+            find . -name "*.gcda" | head -20
+            exit 0   # report-only -- do not fail the coverage job
+          fi
+          echo "Running gcov on: $GCDA"
+          gcov-14 --conditions --all-blocks "$GCDA" 2>&1 | \
+            grep -A 200 "lifetime.h" | head -500
+          echo ""
+          GCOV=$(find . -name "lifetime.h.gcov" | head -1)
+          if [ -n "$GCOV" ]; then
+            echo "=== Full contents of $GCOV ==="
+            cat "$GCOV"
+            echo ""
+            echo "=== Condition outcomes not fully covered in lifetime.h ==="
+            grep -nE "condition outcomes covered [0-9]+/[0-9]+" "$GCOV" | awk -F'[ /]' '$(NF-1)!=$NF' || echo "  (none -- every condition fully covered)"
+          else
+            echo "No lifetime.h.gcov file generated"
+          fi
+
+
   # -------------------------------------------------------------------------
   # 7. MISRA C:2012 advisory analysis (Linux only)
   #

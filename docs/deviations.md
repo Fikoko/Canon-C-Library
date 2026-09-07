@@ -305,6 +305,13 @@ context for any future attempt to strengthen ptr.h's contracts.
 
 ---
 
+**Reading note (2026-09-07, VERIFY-023).** The full-run figure this record
+quotes as `1943/1953` is now **1949/1959**: VERIFY-023 gave `ptr_offset`,
+`ptr_offset_const`, `ptr_elem` and `ptr_elem_const` an `ensures` stating the
+address they return, +6 goals in every TU that includes ptr.h, all proved. The
+10 residuals are unchanged by name. The ptr.h-own baseline of 1729/1739 is
+unaffected in its residual set; its total is 1745 with the same 10.
+
 ## VERIFY-007: WP Limitations on libc Boundary (slice.h)
 
 | Field          | Value |
@@ -800,6 +807,10 @@ the categories above, so the classification tables in this record
 remain valid as written. Ratcheted with the acknowledged commit the
 enforcement gate prescribes.
 
+**Reading note (2026-09-07, VERIFY-023).** The pin is now **2829 / 2872**;
+the 43 residuals are unchanged by name. The +6 goals are ptr.h's new
+`ensures` fragments, all proved here as in every other TU.
+
 ## VERIFY-009: WP Limitations Inherited from Substrate Plus ptr_span/Arithmetic-Chain Residuals (arena.h)
 
 | Field          | Value |
@@ -1289,6 +1300,18 @@ below it. Nothing here evidences those units at 32-bit, and nothing here
 says anything about 16-bit, which the Tier 1 guard in `limits.h` refuses
 outright.
 
+
+**Reading note (2026-09-07, VERIFY-023).** Eight of the residuals this record
+classifies were misattributed. `arena_alloc_fits_ensures_part5`,
+`arena_alloc_fits_ensures_2_part5` and their `_aligned_` twins were recorded
+as "fits/does_not_fit arithmetic chain"; the four
+`arena_free_bytes` / `arena_free_cbytes` `call_bytes_from_requires` goals as
+"free_bytes helpers". All eight closed at CI #1284 when `ptr_offset` and
+`ptr_elem` gained an `ensures` stating their result (VERIFY-023). They were
+never about arithmetic or about the helpers; they were the callee's opaque
+return address. The pin is now **3444 / 3527, 83 residuals** (43 inherited +
+40 own). The text above is left as written so the error is visible.
+
 ## VERIFY-010: WP Limitations Inherited from Substrate Plus pool_invariant Arithmetic and ptr_elem Cascade Residuals (pool.h)
 
 | Field          | Value |
@@ -1670,6 +1693,17 @@ residual appeared; the categories in the tables above absorb them
 unchanged, and every pre-existing residual is still present by name
 (roll-calls extended, not replaced). Zero Failed goals.
 
+
+**Reading note (2026-09-07, VERIFY-023).** Twenty-four of the residuals this
+record classifies were misattributed — the eight inherited from arena (see
+VERIFY-009's note) and sixteen of pool's own: every `*_call_ptr_elem*_requires`,
+both `pool_get*_in_bounds_ensures_part4`, every `as_bytes` / `as_cbytes` /
+`reserved_bytes` / `reserved_cbytes` `call_*bytes_from_requires` pair, and
+`pool_reset_secure`'s three. They were recorded as call-site obligations and
+frame goals. They were the callee's opaque return address, and closed the
+moment `ptr_elem` stated it. The pin is now **3914 / 4009, 95 residuals** (83
+inherited + 12 own). The text above is left as written.
+
 ## VERIFY-011: WP Limitations Inherited from Substrate Plus region_end Opaque-Hook-Dispatch Residuals (region.h)
 
 | Field          | Value |
@@ -1920,6 +1954,12 @@ argument is computed rather than a plain member read. No new CATEGORY of
 residual appeared; the categories in the tables above absorb them
 unchanged, and every pre-existing residual is still present by name
 (roll-calls extended, not replaced). Zero Failed goals.
+
+
+**Reading note (2026-09-07, VERIFY-023).** The eight arena residuals reclassified
+in VERIFY-009's note were inherited here verbatim and closed with them. The pin
+is now **3592 / 3698, 106 residuals** (83 inherited + 23 own, region's own
+surface unchanged by name).
 
 ## VERIFY-012: Contract-Strengthening Closure of Initialization Preconditions (slice.h, memory.h, and downstream)
 
@@ -3218,6 +3258,11 @@ residual appeared; the categories in the tables above absorb them
 unchanged, and every pre-existing residual is still present by name
 (roll-calls extended, not replaced). Zero Failed goals.
 
+
+**Reading note (2026-09-07, VERIFY-023).** The eight arena residuals reclassified
+in VERIFY-009's note were inherited here verbatim and closed with them. The pin
+is now **5285 / 5473, 188 residuals**; vec's own 53 are unchanged by name.
+
 ## VERIFY-019: Zero Core-Substrate Inheritance and a Memory-Model-Invariant Proof (deque, fourth driver-verified module, second data/-layer module)
 
 | Field          | Value |
@@ -3789,6 +3834,19 @@ contracts none of bitset's functions and is not a Shape-B driver.
 
 ---
 
+
+**Reading note (2026-09-07, VERIFY-023).** The `frama-c-bitset` job could not
+fail the build. Every other accumulator-style WP job ends its step with
+`if ENFORCE && FAILURES then exit 1`; this one did not, and had printed
+"ENFORCED" since CI #1259 without ever being able to turn red. Found at CI
+#1284, when the step printed `VERIFY-020 ENFORCED FAIL: 1 check(s)` and the
+job went green; an audit of all 28 gated steps found it to be the only one.
+The name-stability evidence from #1259 onward is real — every roll-call printed
+`missing 0 / unpinned 0` — but **enforcement of this module begins at CI
+#1285**, when the gate was wired, not at #1259 as the table above says. The pin
+is now **4845 / 5008, 163 residuals**, set unchanged by name; the +6 is
+VERIFY-023's goal delta.
+
 ## VERIFY-021: An Instrument Verified, and a Frame Clause That Cannot Be Written (lifetime.h, ladder level 4 only)
 
 | Field          | Value |
@@ -3976,6 +4034,298 @@ closure is `<stdbool.h>` + `types.h`, which pulls only `<stddef.h>`,
 `<stdint.h>`, `<stdbool.h>`. No `contract.h`, so not even the 2-goal handler
 pair every residual-carrying header has inherited. There is nothing composed
 here and nothing to measure about composition.
+
+## VERIFY-022: A Heap Verified in Place, an Information Horizon Closed by a `calls` Clause, and Three Count Predictions Refuted in a Row (priority_queue.h)
+
+| Field          | Value |
+|----------------|-------|
+| **ID**         | VERIFY-022 |
+| **Date**       | 2026-09-07 |
+| **Baseline commit** | Canon-C CI #1289 (`bfd1202`, run 7, first measurement at the final contract state); **enforced at CI #1290** (`63d6705`), which reproduced all 71 names with no header change. Superseded measurements: #1281 (cancelled at 90 min), #1282 (264), #1283 (235), #1284 (208), #1285 (209), #1287 (83), #1288 (72). |
+| **Scope**      | `data/priority_queue.h`, verified in place (Shape A, no driver), all 41 non-macro functions contracted including the new `pq_cmp_`. `DEFINE_PRIORITY_QUEUE`'s typed wrappers PARKED, per the borrow.h/diag.h precedent. Model Typed+Cast, `-wp-split`, 120 s, Alt-Ergo/Z3/CVC5. |
+| **Category**   | Formal verification completeness |
+| **Enforcement**| **ENFORCED at CI #1290.** Pinned `4513 / 4584`; 71 unproved by set equality: 43 inherited from memory.h (read from the memory job's own list at run time so the two pins cannot drift apart silently), 22 result(bool, Error), 6 own. Failed never pinnable. Terminal `exit 1` present — the bitset lesson. |
+
+**Description**: `priority_queue.h` is the first Canon-C module whose central
+operation calls a **caller-supplied function pointer** — the comparator — from
+inside its loops. That single fact shaped the whole arc. WP has no contract
+for an unknown callee, so every statement after `pq->cmp(...)` began with
+`pq->data`, `pq->len` and `pq->elem_size` unknown, and every later obligation
+in `pq_sift_up_` and `pq_sift_down_` failed whatever its own merit. Until
+commit 5 the comparator call was an **information horizon**, and it hid
+everything behind it.
+
+What is claimed is the **structural invariant** `pq_wf`: the struct is valid,
+`elem_size` and `capacity` are positive and their product does not wrap,
+`capacity` is bounded so child indices cannot wrap (F-WRAP), `len <=
+capacity`, the buffer is valid and disjoint from the struct, and the
+comparator is one of compare.h's 24 built-ins with an element wide enough for
+it. Every mutator preserves it; every query requires it. **Heap order is not
+claimed** and cannot be: the built-in comparators ensure only `-1 <= \result <=
+1`, nothing about which way. The runtime suite remains the evidence for
+ordering. This is the VERIFY-020 F4 shape — a specification-strength ceiling
+declared before the run.
+
+4513 of 4584 obligations discharged. Six own residuals: one is Frama-C's
+unimplemented `\valid_function`; five belong to memory.h (see "What remains").
+
+### The run history, and what each run taught
+
+| Run | CI | Own | Predicted | Verdict |
+|-----|----|-----|-----------|---------|
+| 0 | #1281 | — | — | cancelled at 90 min: budget sized from lifetime.h, not the memory.h substrate |
+| 1 | #1282 | 199 | > 71 | confirmed on count, refuted on reason (annotations, not heap complexity) |
+| 2 | #1283 | 170 | < 60 | **refuted** |
+| 3 | #1284 | 143 | < 90 | **refuted** |
+| 4 | #1285 | 144 | < 130 | **refuted**; heapify regressed a second time |
+| 5 | #1287 | 18 | classes, not a count | 12 outside the classes, each traced |
+| 6 | #1288 | 7 | classes | 1 outside, traced |
+| 7 | #1289 | 6 | classes | **confirmed**: comparator 1, separation 5, else 0 |
+| 8 | #1290 | 6 | set equality | **enforced**, name-identical to #1289 |
+
+Three consecutive count predictions were refuted, and each for the same
+reason: a cause was inferred from a symptom and not traced in the log.
+
+- Run 2 attributed ~85 residuals to `ptr_elem` returning an opaque pointer.
+  That was partly right — it produced VERIFY-023 — but most of the count was
+  the comparator cascade.
+- Run 3 counted the "cmp ceiling" at 41 by grepping for goals with
+  function-pointer-ish *names*. The true cascade — everything after the first
+  `pq->cmp` call — was ~99.
+- Run 4 added `\separated(pq, buffer)` to `pq_wf`, predicting it would close
+  push_result's postconditions. It closed nothing. The real cause was the
+  **uncontracted result constructors** at push_result's return statements,
+  which WP took as assigning everything.
+
+Run 5 stopped predicting counts. The job now sorts every own residual into
+named classes and prints a per-function tally; the only prediction that can
+fail is "everything outside the named classes is 0". It failed once more (run
+6, one goal, `pq_pop` lacking the readability requires its callee had gained),
+then held.
+
+### The comparator: two closures considered, the verified one chosen
+
+**(a) A trusted axiom** — wrap the call, contract the wrapper `assigns
+\nothing`, leave its own goal unprovable as the permanent marker. This is
+diag.h's stdio-axiom shape (VERIFY-017). It covers any comparator and proves
+nothing about it.
+
+**(b) A verified configuration** — a `calls` clause naming compare.h's 24
+built-in comparators, and a requires that `pq->cmp` is one of them. All 24
+are proved (VERIFY-005, 208/208, zero residuals) with `assigns \nothing`,
+byte-form validity requires and a bounded result, so the wrapper's frame and
+termination follow from **their** contracts. This is lifetime.h's "verified at
+level 4 only" shape: the claim narrows to the built-in family, and nothing is
+trusted. A caller-supplied comparator compiles and runs exactly as before; it
+is outside the verified configuration.
+
+(b) was chosen, on the observation that the built-ins' requires are already in
+byte form, so no Typed+Cast bridging is needed at the wrapper. The wrapper
+`pq_cmp_` is the single point at which the queue calls the comparator; the
+three call sites become `pq_cmp_(pq, a, b)`, identical machine code, MC/DC
+denominator unchanged at 82. The one goal it carries is
+`\valid_function(pq->cmp)`, unimplemented in Frama-C 29 — the same single goal
+every function-pointer call in the project carries. **This closed ~99
+residuals at once**, and the `calls` clause was confirmed to take by the
+absence of `assigns` and `terminates` goals on the wrapper at #1287.
+
+### Findings
+
+**F-WRAP** — `pq_left_child_` and `pq_right_child_` compute `2*i+1` and `2*i+2`
+in `usize` with no guard. For `elem_size == 1` a queue with `capacity > 2^63 - 1`
+makes `2*idx+1` wrap, and `left < pq->len` then reads the wrong slot silently.
+No such buffer exists, so this is not a runtime bug; but the code is unguarded
+and WP found it as two unprovable child-index requires at CI #1287. `pq_wf_buf`
+and `pq_init` now bound `capacity <= (USIZE_MAX - 2) / 2` — the MCDC-003
+arena-cap shape. The proof states the bound rather than assuming it.
+
+**Result constructors assign everything.** `result__Bool_Error_ok` / `_err`,
+macro-instantiated at the top of the header, had no `assigns`. Every
+postcondition of a function that returns one of them died at the `return`.
+Fixed by interposition under `__FRAMAC__` using vec_verify.h's exact shapes:
+type first, contracted prototypes, then the definitions. Shipped path
+byte-identical. Six goals, misattributed in run 4 to struct/buffer aliasing.
+
+**Call-site frames are the callee's union.** A wrapper cannot claim `assigns
+\nothing` on a reject path if it delegates to a function whose default frame
+is the union over its behaviours; WP checks the call against that union. Seven
+goals across `pq_push`, `pq_pop`, `pq_remove_at`. The wrappers now carry the
+union as their function-level frame — true but weaker, deque's run-1 shape,
+recorded as such.
+
+**`pq_wf` grew and heapify lagged it, twice.** Commits 3 and 4 each added a
+conjunct to `pq_wf`; `pq_heapify` — which sets `len` and so cannot require
+`len <= capacity` — carried a hand-copied subset of the invariant in its
+requires, and that copy was not updated either time. Regressed 0 → 4 → 5.
+Commit 5 split `pq_wf_buf` out so heapify requires the shared predicate. One
+definition, two names.
+
+**Three small omissions of my own**, each caught by the class tally within a
+run of being made: `pop_raw` read `pq->len` before requiring readability;
+`pq_peek`'s `none` branch with `out == NULL` still ran `peek_raw`'s nonempty
+behaviour without `pq_wf`; `pq_pop` did not carry the readability requires
+its callee had gained.
+
+### What remains: the six, and whose they are
+
+| # | Goal | Cause | Owner |
+|---|------|-------|-------|
+| 1 | `pq_cmp_assert_rte_function_pointer` | `\valid_function` unimplemented in Frama-C 29 | tool |
+| 5 | `mem_copy_requires_3` ×4 (push_result, pop_raw, remove_at_result, peek), `mem_swap_requires_2` ×1 | memory.h states `regions_overlap` by **pointer ordering** — `a < b + size && b < a + size`. Under WP, ordering two pointers into different bases is meaningless, so `\separated(elem, buffer)`, which `pq_wf` and the contracts give, cannot discharge it. | **memory.h** — a contract-shape finding of the VERIFY-023 kind. State the predicate with `\separated`. **VERIFY-024 candidate**, its own arc, its own ratchet. |
+
+`remove_at_result`'s instance is the same-base case and additionally needs
+multiplication (slot `i` vs slot `len`, lifted through `elem_size`); it is
+listed with the other four because the predicate shape is the blocker first.
+
+### Prediction scorecard
+
+| | Registered | Outcome |
+|---|---|---|
+| ARM A: Typed+Cast takes effect | 0 plain `typed_` goals | confirmed, every run |
+| ARM B: memory.h's 43 inherited verbatim, none extra | 43/43, 0 extra | confirmed, every run; the regex bug of run 1 (`result__Bool_Error` vs `result_Bool_Error`) was in the job, not the proof |
+| ARM C: fresh result arm | 22, get_ok/get_err 1/1 | confirmed, every run; 22 = vec's pre-F4 count, second reproduction |
+| ARM D runs 2–4: own count | < 60, < 90, < 130 | **refuted ×3** — see above |
+| ARM D runs 5–7: named classes | comparator 1, separation 5, else 0 | refuted at 5 and 6 by traced omissions; **confirmed at 7** |
+| ARM E: arms sum to total | equality | confirmed, every run |
+| Comparator `calls` clause takes | 1 goal on `pq_cmp_`, no `assigns`/`terminates` | confirmed — the job's bin said 0 because its regex wanted a double underscore where WP emits one; third instance of the prefix/underscore class in this workflow, fixed |
+| VERIFY-023 timeout-flip risk | "unlikely" | did not occur |
+
+### Method notes recorded for the next arc
+
+Every wrong count in this arc came from naming a cause that fit the symptom
+without tracing it in the log. Every right call — the `calls` clause, the
+constructor interposition, F-WRAP — came from reading a contract or a goal
+name and checking what it actually said. Three additional rules now apply to
+this header and should apply to the next: ACSL predicates must be defined
+before use and that order is checked in the preprocessed unit before commit
+(CI #1286 aborted on it); a `pq_wf` conjunct is never added without checking
+every function that carries a subset of `pq_wf` by hand (there are now none);
+and a residual bin's regex is dry-run against a collision-prone name list
+before it ships.
+
+### Cross-references
+
+- VERIFY-023 — the ptr.h ensures this arc caused, and the 24 misattributions it
+  exposed.
+- MCDC-014 — the coverage arc that preceded verification: 62/78 → 81/82, and
+  the PQ-A finding.
+- VERIFY-005 — the 24 comparators the `calls` clause names; this is the first
+  module to compose over a zero-residual header by enumeration.
+- VERIFY-017 — the trusted-axiom shape considered and not chosen.
+- VERIFY-021 — the "verified configuration" shape that was chosen.
+- VERIFY-024 (candidate) — `regions_overlap` restated with `\separated`.
+
+## VERIFY-023: Four Address Helpers State Their Result, and Twenty-Four Residuals in Five Modules Turn Out to Have Been Misattributed (ptr.h)
+
+| Field          | Value |
+|----------------|-------|
+| **ID**         | VERIFY-023 |
+| **Date**       | 2026-09-06 |
+| **Baseline commit** | Canon-C CI #1284 (measurement), CI #1285 (ratchet, `b79a51f`). |
+| **Scope**      | `core/primitives/ptr.h`: `ptr_offset`, `ptr_offset_const`, `ptr_elem`, `ptr_elem_const`. Each gains one `ensures` in its nonnull behaviour stating the address it returns. Nothing else in the header changes; the shipped token stream is byte-identical after comment stripping. |
+| **Category**   | Substrate contract strengthening; residual reclassification |
+| **Enforcement**| Eight enforced jobs ratcheted in one commit (`b79a51f`): ptr, memory, arena, arena-32, pool, region, vec, bitset. Residual lists rewritten by name; arena-32's embedded baseline rewritten to the new 83. |
+
+**Description**: the four helpers that every container uses to address an
+element returned a pointer about which their contracts said nothing. WP
+therefore treated the result of every `ptr_elem` call as an unconstrained
+pointer, and every downstream obligation about that address — validity for
+`mem_copy`, separation for `mem_swap`, the frame of a write through it —
+failed regardless of its own merit. The gap was found from the outside:
+`priority_queue.h`'s second WP run (VERIFY-022, CI #1283) left 170 own
+residuals, and reading them showed ~85 landing on element addresses.
+
+The fix is four lines, one per helper: `ensures (u8*)\result == (u8*)base +
+index * elem_size;` and its three siblings. The pre-registration predicted +4
+goals per translation unit and an unchanged residual set. Both were wrong in
+the good direction.
+
+### What moved, and what was predicted
+
+| Job | Pin before | Pin after | Residuals | Predicted |
+|-----|-----------|-----------|-----------|-----------|
+| ptr | 1943/1953 | 1949/1959 | 10 → 10 | unchanged ✓ |
+| memory | 2823/2866 | 2829/2872 | 43 → 43 | unchanged ✓ |
+| arena | 3430/3521 | 3444/3527 | 91 → **83** | unchanged ✗ |
+| arena-32 | = arena | 3444/3527 | 83 = 83 | set equality ✓ |
+| pool | 3884/4003 | 3914/4009 | 119 → **95** | 2 named ✗ (24 closed) |
+| region | 3578/3692 | 3592/3698 | 114 → **106** | unchanged ✗ |
+| vec | 5271/5467 | 5285/5473 | 196 → **188** | unchanged ✗ |
+| bitset | 4839/5002 | 4845/5008 | 163 → 163 | unchanged ✓ |
+
+The goal delta was **+6**, not +4: `ptr_offset` and `ptr_offset_const` have a
+null/nonnull branch, so `-wp-split` fragments their new `ensures` in two;
+`ptr_elem` and `ptr_elem_const` have none. Right mechanism, wrong count.
+
+Twenty-four distinct goals closed, and every one had been pinned as a residual
+with a written explanation. Arena's eight: four `arena_alloc*_fits_ensures_part5`
+fragments and all four `arena_free_bytes` / `arena_free_cbytes`
+`call_bytes_from_requires` goals — inherited verbatim by arena-32, pool,
+region and vec. Pool's own sixteen: every `*_call_ptr_elem*_requires`, every
+`as_bytes` / `as_cbytes` / `reserved_bytes` / `reserved_cbytes` call-site pair,
+and `pool_reset_secure`'s three. Of the 24 the pre-registration named 2
+(pool's `in_bounds_ensures_part4` pair); it also named 8 (arena's
+`ptr_span_requires`) that did **not** close.
+
+**Zero goals moved in the bad direction.** The named risk — that a new
+callee `ensures` is a hypothesis in every caller and could push a 90-second
+proof over the 120-second timeout — did not materialise. Two arena
+`ptr_span_requires` goals flipped Timeout→Unknown, which the house rule pools.
+
+### The finding: the classifications were wrong
+
+VERIFY-009 recorded the `fits_ensures` fragments as "fits/does_not_fit
+arithmetic chain" and the `free_bytes` four as "free_bytes helpers". VERIFY-010
+recorded pool's `ptr_elem_requires` goals as call-site obligations. Those
+entries described a **symptom** and attributed it to the wrong **cause**. The
+goals were never about arithmetic or about the call sites; they were the
+callee's opaque return value, and they closed the moment the callee stated it.
+
+Nothing in the pipeline could have told anyone. A misattributed residual and a
+correctly attributed one pin identically, print identically, and are
+name-stable identically. The record was wrong for months and stayed wrong
+because a wrong explanation is as stable as a right one. It surfaced only
+because a fourth module hit the same wall hard enough that someone read
+`ptr_elem`'s contract. Reading notes dated 2026-09-07 are appended to
+VERIFY-009, -010, -011 and -018 below; the original text is left standing so
+the error is visible.
+
+### Two collateral findings, both about the workflow rather than the code
+
+**frama-c-bitset could not fail the build.** Every other accumulator-style WP
+job ends with `if ENFORCE && FAILURES then exit 1`; the bitset job did not.
+It had printed "ENFORCED" since CI #1259 and had never been able to turn red.
+Found at CI #1284, when its step printed `VERIFY-020 ENFORCED FAIL: 1 check(s)`
+and the job went green. An audit of all 28 gated steps in the workflow found it
+to be the only one. The name-stability evidence from #1259 onward is real —
+every roll-call printed `missing 0 / unpinned 0`, and #1284 holds set equality
+at 163 — but **enforcement of bitset begins at CI #1285**, not #1259. VERIFY-020
+carries a reading note.
+
+**arena-32's embedded baseline was a second copy of arena's pin.** It reported
+"8 newly proved at 32-bit, 0 width-specific" against its own stale 91-name
+list while the 64-bit job had also moved to 83. Width invariance held; the
+job's coupling-check comment had warned about exactly this drift, and the
+baseline is now rewritten with the pin.
+
+### Two mistakes caught before the commit
+
+A rationale comment contained `sint8*/uint8*`; the `*/` closed the comment
+and would have broken all 32 build-matrix cells. And the pin ratchet blindly
+rewrote `3430 / 3521` everywhere it appeared — including arena-32's historical
+measurement table for CI #1202/#1209/#1210. Restored; the paragraph is now
+annotated "do not rewrite history when ratcheting."
+
+### What this says about the pedantic-assigns list
+
+Every WP run prints `No 'assigns \result \from ...' specification for function
+X returning pointer type`. Before this arc that list was noise. It is now
+known to be a residual generator: `ptr_align_up`, `ptr_align_down`,
+`ptr_retreat`, `bytes_at`, `mem_alloc`, `arena_alloc*`, `pool_get`,
+`borrowed_ptr_get` are all still on it, and the `ptr_align_*` trio is
+inherited by every job in the workflow. No prediction is made about whether
+any of them close; it is a lead of the shape that just paid 24 goals, and it
+costs one read of each contract to check.
 
 ## MCDC-001: Coverage Flags Methodology
 
@@ -5771,7 +6121,7 @@ command and flags.
 
 ### Cross-references
 
-- Proof-stream record for the same module: VERIFY-020 (4839/5002, 163
+- Proof-stream record for the same module: VERIFY-020 (4845/5008, 163
   pinned residuals, 71 own).
 - F2's WP-side statement and its five-goal proof cost: VERIFY-020 F2
   and F5.
@@ -6537,3 +6887,110 @@ rather than a test — and it is now evidence, not an argument.
 This inverts VERIFY-020 E1/F5, where a clause redundant for the LOGIC was
 load-bearing for the PROVER. Here a branch dead in EXECUTION on the measuring
 host is load-bearing for the PROOF.
+
+
+## MCDC-014: Twelve Test Gaps, a Zero-Execution Swap Path Misread as a Justification, and Six Public Symbols That Should Never Have Been (priority_queue.h)
+
+| Field          | Value |
+|----------------|-------|
+| **ID**         | MCDC-014 |
+| **Date**       | 2026-09-05 |
+| **Baseline commit** | Canon-C CI #1280 (`d0b6f2c`). |
+| **Scope**      | `data/priority_queue.h` MC/DC: 62/78 (79.5%) → 82/82 (100%) by tests, then → 81/82 (98.8%) after PQ-A. Aggregate 1796/2014 → 1816/2018 → 1815/2018. |
+| **Category**   | Coverage completeness; API finding |
+
+**Description**: `priority_queue.h` entered this arc at 79.5% MC/DC with no
+enumeration of what the missing 16 outcomes were. The enumeration — produced
+by the per-line report the coverage job now emits for graduated files — turned
+"79.5%" into twelve test gaps, one zero-execution code path, and one API
+finding. Nothing was justified away.
+
+### Enumeration, then disposition
+
+Twelve of the sixteen misses were ordinary test gaps: error paths of
+`pq_push_result` and `pq_remove_at_result`, the `out == NULL` legs of `pq_pop`
+and `pq_peek`, `pq_heapify` with `len > capacity`, and both branches of the
+`as_bytes` / `as_cbytes` empty checks. Each got a test; each moved.
+
+One miss was a whole path: **the large-element swap loop had never
+executed.** `pq_swap_` uses `mem_swap` for elements up to `CANON_MEM_SWAP_MAX`
+bytes and falls back to a byte loop above it. Every existing test used small
+elements. The first reading of this miss was that it was a justification row —
+"no realistic element is that large." That reading was **wrong** and was
+corrected before it reached the docs: the path is reachable by any caller with
+a large element, it is the only code that runs for them, and it had zero
+executions. A test with a 516-byte element now drives it, and the correction is
+recorded here because the misreading is exactly the kind the justification
+mechanism invites.
+
+The aggregate moved 1796/2014 → 1816/2018: +20 outcomes covered, +4 in the
+denominator from the new tests reaching previously uncompiled conditions.
+
+### The justification row that IS real — and why coverage then went DOWN
+
+`pq_swap_`'s `if (a == b) { return; }` had been covered by
+`test_self_swap_is_a_noop`, which called the then-public `pq_swap` directly
+with `a == b`. PQ-A (below) renamed the six heap helpers internal, and with
+that the self-swap leg became **dead by construction**: `pq_sift_down_` only
+swaps when `smallest != idx`, and `pq_sift_up_` swaps a parent with a child at
+`idx > 0`, so a self-swap cannot arise from the heap's own operations.
+
+The test was deleted rather than adapted. Reaching that leg now would mean
+calling an internal symbol from a test purely to move a number — the
+contrived-driver pattern the project rejects, and the same reasoning that kept
+lifetime.h's guard as a justification row in MCDC-013 rather than an injectable
+counter. So coverage went **82/82 → 81/82** and aggregate **1816 → 1815**, and
+that is the correct outcome. A reader seeing 90.0% then 89.9% in consecutive
+runs deserves the reason without digging through commits: the rename made a
+branch unreachable, and the honest measurement follows the code.
+
+| Justification | File:line | Outcome | Reason |
+|---|---|---|---|
+| J1 | `data/priority_queue.h`, `pq_swap_` `a == b` | TRUE leg | Dead by construction after PQ-A: no internal caller passes equal indices. Kept as a guard against future internal callers, not as reachable behaviour. |
+
+### PQ-A: the finding coverage work produced
+
+`pq_swap`, `pq_sift_up`, `pq_sift_down`, `pq_parent`, `pq_left_child` and
+`pq_right_child` were plain public symbols. The same header already marked
+`pq_lifetime_next_id_`, `pq_lifetime_open_` and `pq_lifetime_restamp_`
+internal with a trailing underscore; the convention existed and had not been
+applied to the heap internals.
+
+The exposure was not cosmetic. Demonstrated on the pre-rename header: a client
+calling `pq_swap(&q, 0, 4)` on a queue holding 1..5 leaves `pq_peek` returning
+3 where the minimum is 1. The heap invariant breaks silently — no error, no
+diagnostic. And because `pq_swap` deliberately does not restamp the lifetime
+token (so a single push or pop produces exactly one id bump), a client call
+mutates contents **without** bumping the id: an outstanding borrow keeps
+validating against a queue that changed underneath it. The instrument fails
+OPEN — the mode VERIFY-021 was written to prevent in the token generator.
+
+Blast radius was checked before renaming, not assumed: zero callers outside
+the header, none in test/, none in docs/. No deprecation shim, because nothing
+to deprecate was found. The header change was verified to be
+rename-plus-comments only by reversing the rename and diffing.
+
+### Graduation — what exists and what does not
+
+`data/priority_queue.h` is the second file, after `core/primitives/lifetime.h`
+(MCDC-013), whose coverage arc is **settled**: every outcome is either covered
+or carries a justification row above. Both now have a `Debug: per-line MC/DC
+detail` step in the coverage job (added with this entry — neither had one
+before, although fourteen other files did), so the exact missed outcome is
+printed on every run and can be compared against the J-table by eye.
+
+What does **not** exist, and must not be read into the word "graduated": an
+automated allowlist. The per-line steps are report-only, like the fourteen
+before them. The intended mechanism — one `file:line` justification register
+per settled file, with the coverage job failing on any miss not in it — is
+recorded here as future work, to be checked by hand against the per-line dump
+before each release cut until it is built. An unexplained miss on a settled
+file is a regression in the sense that a human reading the dump should treat
+it as one, not in the sense that CI turns red.
+
+### Cross-references
+
+- VERIFY-022 — the verification arc that followed; the same six renamed helpers
+  are the ones whose comparator calls became the information horizon.
+- MCDC-013 — the justification-row reasoning this entry reuses.
+- VERIFY-021 — the failure-open mode PQ-A's exposure shares.

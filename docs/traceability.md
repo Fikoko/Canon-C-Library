@@ -56,7 +56,14 @@
 | **Scope**          | Library headers + Shape-B cover TUs — test files excluded    |
 | **Test binaries**  | 54 (50 test binaries + 4 Shape-B cover TUs `option_cover`, `result_cover`, `vec_cover`, `deque_cover`; contract_test excluded from the coverage build — confirmed against #1240, which reports "Found 54 data files in build") |
 
-> **Coverage moved by VERIFY-021 (2026-09-02), and DOWNWARD.** MC/DC is now
+> **Coverage moved by MCDC-014 (2026-09-05), twice.** MC/DC is now
+> **1815/2018 (89.94%)**. The priority_queue coverage arc took the aggregate
+> 1796/2014 → 1816/2018 by tests (twelve gaps closed, including a swap path
+> that had zero executions), then 1816 → 1815 when PQ-A made the self-swap leg
+> dead by construction. The second step is a rename making a branch
+> unreachable, and the measurement following the code — see MCDC-014.
+>
+> **Coverage moved by VERIFY-021 (2026-09-02), and DOWNWARD.** MC/DC was then
 > **1796/2014 (89.176%)**, from 1795/2012 (89.215%). `lifetime_test.c` defines
 > `CANON_LIFETIME_DEBUG` itself, so `canon_lifetime_next_id_` compiles in the
 > coverage build — which does not set `CANON_LIFETIME` — and brings 2 condition
@@ -765,22 +772,38 @@ proved line 5231 / 5429 → 5271 / 5467.
 | checked.h  | 30        |              1755 | 1753 (99.89%) | 2        | VERIFY-002   |
 | bits.h     | 18        |               757 | 742 (98.02%) | 15       | VERIFY-003/4 |
 | compare.h  | 28        |               208 | 208 (100.00%) | 0        | VERIFY-005   |
-| ptr.h      | 21        |              1953 | 1943 (99.49%) | 10       | VERIFY-006   |
+| ptr.h      | 21        |              1959 | 1949 (99.49%) | 10       | VERIFY-006/23 |
 | slice.h    | 22        |               394 | 379 (96.19%) | 15       | VERIFY-007/12 |
-| memory.h   | 27        |              2866 | 2823 (98.50%) | 43       | VERIFY-008/12 |
-| arena.h    | 25        |              3521 | 3430 (97.42%) | 91       | VERIFY-009/12 |
-| pool.h     | 21        |              4003 | 3884 (97.03%) | 119      | VERIFY-010/12 |
-| region.h   | 12        |              3692 | 3578 (96.91%) | 114      | VERIFY-011/12 |
+| memory.h   | 27        |              2872 | 2829 (98.50%) | 43       | VERIFY-008/12/23 |
+| arena.h    | 25        |              3527 | 3444 (97.65%) | 83       | VERIFY-009/12/23 |
+| pool.h     | 21        |              4009 | 3914 (97.63%) | 95       | VERIFY-010/12/23 |
+| region.h   | 12        |              3698 | 3592 (97.13%) | 106      | VERIFY-011/12/23 |
 | error.h    | 4         |                65 | 65 (100.00%) | 0        | VERIFY-013   |
 | option     | 16        |               223 | 189 (84.75%) | 34       | VERIFY-014   |
 | result     | 17        |               215 | 185 (86.05%) | 30       | VERIFY-015   |
 | borrow.h   | 24        |              2458 | 2439 (99.23%) | 19       | VERIFY-016   |
 | diag.h     | 13        |              3060 | 3050 (99.67%) | 10       | VERIFY-017   |
-| vec        | 37        |              5467 | 5271 (96.41%) | 196      | VERIFY-018   |
+| vec        | 37        |              5473 | 5285 (96.56%) | 188      | VERIFY-018/23 |
 | deque      | 24        |              1668 | 1601 (95.98%) | 67       | VERIFY-019   |
-| bitset     | 32        |              5002 | 4839 (96.74%) | 163      | VERIFY-020   |
+| bitset     | 32        |              5008 | 4845 (96.75%) | 163      | VERIFY-020/23 |
 | lifetime.h | 1         |                 4 | 4 (100.00%)  | 0        | VERIFY-021   |
-| **Total**  | **372**   | **37311**         | **36383 (97.51%)**| **928**  |              |
+| priority_queue.h | 41  |              4584 | 4513 (98.45%) | 71       | VERIFY-022   |
+| **Total**  | **413**   | **41937**         | **40986 (97.73%)**| **951**  |              |
+
+`priority_queue.h` is enforced as of CI #1290 (name-identical to #1289 with no
+header change; VERIFY-022). Its 71 residuals are 43 inherited from memory.h,
+22 from the fresh `result(bool, Error)` instantiation, and 6 own — one
+`\valid_function` limit and five `regions_overlap` goals that belong to
+memory.h's contract shape (VERIFY-024 candidate). Its comparator claim is a
+**verified configuration**, not a universal one: `pq->cmp` must be one of
+compare.h's 24 built-ins for the proof to apply. The row's 41 functions include
+`pq_cmp_`, the single point at which the queue calls the comparator.
+
+Seven other rows moved at CI #1285 (VERIFY-023): every TU including `ptr.h`
+gained 6 goals, and 24 residuals that had been recorded as arithmetic or
+call-site limits in arena, pool, region and vec closed when `ptr_offset` and
+`ptr_elem` stated their result. Those entries were misattributed; reading notes
+in deviations.md say so.
 
 `lifetime.h` is enforced as of CI #1275 (name-identical at #1271, #1273,
 #1274), so it now belongs in the enforced-pin claim below. Its scope is still
@@ -879,7 +902,7 @@ itself flags — see VERIFY-015).
 **Note on totals**: each per-header row reports that header's own
 obligations (substrate goals are counted under their owning header,
 not duplicated into downstream rows). The CI WP step for ptr.h
-actually reports 1943/1953 because it processes ptr.h's translation
+actually reports 1949/1959 (1943/1953 before VERIFY-023) because it processes ptr.h's translation
 unit including checked.h, but those +214 obligations belong to
 checked.h's row, not ptr.h's. Similarly, memory.h's CI step processes
 memory.h with ptr.h, slice.h, checked.h, and contract.h all

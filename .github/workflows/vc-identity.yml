@@ -6,6 +6,10 @@ name: VC identity (paper experiment)
 #
 # RUN LOG — three readings, two of them wrong. Read before trusting anything.
 #
+#   NOTE 2026-09-07: every arena figure in this log is from BEFORE VERIFY-023
+#   (CI #1285), which took arena to 3444/3527 with 83 residuals. The log is
+#   history and is not rewritten; the expectation echoed by the job below is.
+#
 #   #1 phase 3 : arena 3430/3521 full provers, 740 cache entries;
 #                vec offline vs that cache 4885/5429.
 #   #2 phase 2 : vec Qed-only 4644/5429 ; arena Qed-only 3065/3521.
@@ -99,7 +103,8 @@ jobs:
 
           echo ""
           echo "=== 11.2 POSITIVE CONTROL: arena replayed against its OWN cache ==="
-          echo "    provers disabled, all three consulted. MUST reproduce 3430/3521."
+          echo "    provers disabled, all three consulted. MUST reproduce 3444/3527"
+          echo "    (3430/3521 before VERIFY-023, CI #1285 -- the run log above predates it)."
           frama-c -wp ${MODEL} ${PROVERS} -wp-cache offline -wp-cache-dir "$CACHE" \
             -wp-report-json "$OUT/arena-offline.json" \
             "-cpp-extra-args= ${ARENA_INC} -DCANON_NO_REQUIRE -DNDEBUG" \
