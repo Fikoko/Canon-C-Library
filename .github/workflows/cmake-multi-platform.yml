@@ -5681,7 +5681,7 @@ jobs:
 
   # -------------------------------------------------------------------------
   # data/priority_queue.h — REPORT-ONLY (VERIFY-022; runs 0-4 at CI #1281-#1285,
-  # run 5 = 18 own; commit 6 closes the 12 that were pq's, run 6 pending)
+  # run 6 = 7 own; commit 7 closes the last one that was pq's, run 7 pending)
   #
   # Shape: verified IN PLACE, no cover TU and no driver. The 40 non-macro
   # functions carry the contracts; DEFINE_PRIORITY_QUEUE's 17 typed wrappers
@@ -5994,7 +5994,7 @@ jobs:
           #     now carries a contract. A residual outside the two classes
           #     above is a contract error to read, not a number to record.
           OWN_N=$(grep -cE '^typed_cast_pq_' /tmp/pq_resid.txt || true)
-          echo "  pq_* residuals:           ${OWN_N}   (run 1: 199; run 2: 170; run 3: 143; run 4: 144; run 5: 18)"
+          echo "  pq_* residuals:           ${OWN_N}   (run 1: 199; run 2: 170; run 3: 143; run 4: 144; run 5: 18; run 6: 7)"
           # RUN 5 (CI #1287): 144 -> 18. The calls clause TOOK: pq_cmp_ carries
           # exactly one goal, \\valid_function -- but this regex said 0, because
           # WP names RTE goals with a SINGLE underscore (pq_cmp_assert_...) and
@@ -6021,9 +6021,9 @@ jobs:
           echo "    regions_overlap by pointer order:  ${MULT_N}   (expected 5: memory.h contract shape, VERIFY-024 candidate)"
           echo "    everything else:                   ${REST_N}   (expected 0 -- anything here is a contract to read)"
           if [ "${REST_N}" -eq 0 ]; then
-            echo "  run-6 class prediction:   CONFIRMED -- every residual is in a named class"
+            echo "  run-7 class prediction:   CONFIRMED -- every residual is in a named class"
           else
-            echo "  run-6 class prediction:   REFUTED -- ${REST_N} residual(s) outside both classes, listed by function:"
+            echo "  run-7 class prediction:   REFUTED -- ${REST_N} residual(s) outside both classes, listed by function:"
           fi
           echo "  --- per-function tally (own residuals) ---"
           # Explicit names with anchored prefixes. pq_push is a prefix of

@@ -299,7 +299,7 @@ typedef struct {
 
 /** @brief Returns index of parent node — @pre i > 0 */
 /* ════════════════════════════════════════════════════════════════════════════
- * ACSL: structural invariant and scope (VERIFY-022, commit 6 — runs 1-5 at CI #1282-#1287 scored, see the job)
+ * ACSL: structural invariant and scope (VERIFY-022, commit 7 — runs 1-6 at CI #1282-#1288 scored, see the job)
  *
  * WHAT IS CLAIMED: the STRUCTURAL invariant only. A queue is well-formed when
  * its buffer is valid for capacity*elem_size bytes, len <= capacity, and
@@ -1133,6 +1133,7 @@ static inline result__Bool_Error pq_remove_at_result(
 /** @brief Inserts elem — returns true on success. Prefer pq_push_result(). */
 #ifdef __FRAMAC__
 /*@
+  assigns pq->len, ((char*)pq->data)[0 .. pq->capacity * pq->elem_size - 1];  // commit 7
   behavior rejected:
     assumes pq == \null || elem == \null;
     ensures \result == \false;
@@ -1165,6 +1166,11 @@ static inline bool pq_push(borrowed(PriorityQueue*) pq, borrowed(const void*) el
 /** @brief Removes and copies the top element into out. Prefer pq_pop_raw(). */
 #ifdef __FRAMAC__
 /*@
+  requires pq == \null || \valid_read(pq);   // commit 7: pop_raw requires this
+                                              // (added in commit 6) and pq_pop
+                                              // delegates to it -- the one goal
+                                              // outside both classes at CI #1288
+  assigns pq->len, ((char*)pq->data)[0 .. pq->capacity * pq->elem_size - 1], ((char*)out)[0 .. pq->elem_size - 1];
   behavior empty:
     assumes pq == \null || pq->len == 0;
     ensures \result == \false;
@@ -1233,6 +1239,7 @@ static inline bool pq_peek(borrowed(const PriorityQueue*) pq, void* out) {
 #ifdef __FRAMAC__
 /*@
   requires pq == \null || \valid_read(pq);
+  assigns pq->len, ((char*)pq->data)[0 .. pq->capacity * pq->elem_size - 1];  // commit 7
   behavior rejected:
     assumes pq == \null || i >= pq->len;
     ensures \result == \false;
