@@ -42,10 +42,10 @@
 
 | Field              | Value                                                        |
 |--------------------|--------------------------------------------------------------|
-| **Date**           | 2026-08-27                                                   |
+| **Date**           | 2026-09-07                                                   |
 | **Version**        | v1.3.0                                                       |
-| **Commit**         | 16d0f0b                                                      |
-| **CI run**         | Canon-C CI #1266                                             |
+| **Commit**         | 63d6705                                                      |
+| **CI run**         | Canon-C CI #1290                                             |
 | **CI job**         | coverage + frama-c                                           |
 | **Branch**         | master                                                       |
 | **Compiler**       | GCC 14.2.0                                                   |
@@ -54,7 +54,7 @@
 | **Tool**           | gcov-14 --conditions (MC/DC) + lcov (branch)                |
 | **Runner**         | ubuntu-latest (GitHub Actions)                               |
 | **Scope**          | Library headers + Shape-B cover TUs — test files excluded    |
-| **Test binaries**  | 54 (50 test binaries + 4 Shape-B cover TUs `option_cover`, `result_cover`, `vec_cover`, `deque_cover`; contract_test excluded from the coverage build — confirmed against #1240, which reports "Found 54 data files in build") |
+| **Test binaries**  | 55 instrumented (`Found 55 data files`), of which 4 are Shape-B cover TUs `option_cover`, `result_cover`, `vec_cover`, `deque_cover`; ctest registers 54 |
 
 > **Coverage moved by MCDC-014 (2026-09-05), twice.** MC/DC is now
 > **1815/2018 (89.94%)**. The priority_queue coverage arc took the aggregate
@@ -211,15 +211,26 @@
 
 | Metric     | Percentage | Covered    | Total      |
 |------------|------------|------------|------------|
-| Lines      | 96.4%      | 2669       | 2768       |
-| Functions  | 99.5%      | 655        | 658        |
-| Branches   | 87.7%      | 1571       | 1792       |
-| MC/DC      | 88.5%      | 1774       | 2004       |
+| Lines      | 96.7%      | 2693       | 2785       |
+| Functions  | 99.6%      | 665        | 668        |
+| Branches   | 89.3%      | 1612       | 1806       |
+| MC/DC      | 89.9%      | 1815       | 2018       |
 
-> **Transcribed from CI #1240's coverage job, 2026-08-21.** All four rows are
-> that run's own figures. Deltas from the CI #1202 measurement, for the record:
-> lines 2566/2665 → 2669/2768 (+103), functions 621/624 → 655/658 (+34),
-> branches 1557/1778 → 1571/1792 (+14), MC/DC 1692/1922 → 1774/2004 (+82).
+> **Transcribed from CI #1290's coverage job, 2026-09-07.** All four rows are
+> that run's own figures, unchanged since CI #1280 (the pq coverage arc); the
+> intervening runs changed only proof state. Deltas from the CI #1240
+> measurement, for the record: lines 2669/2768 → 2693/2785 (+24), functions
+> 655/658 → 665/668 (+10), branches 1571/1792 → 1612/1806 (+41), MC/DC
+> 1774/2004 → 1815/2018 (+41). The MC/DC path between them: 1795/2012 at
+> #1266 (bitset, MCDC-012), 1796/2014 at #1275 (lifetime.h, MCDC-013, the
+> denominator growing by a platform-dead outcome), 1816/2018 then 1815/2018 at
+> #1280 (priority_queue, MCDC-014). Lines, functions and branches were not
+> tracked run-by-run over that span; only the endpoints are recorded.
+>
+> The previous entry in this table read, transcribed from CI #1240 on
+> 2026-08-21: lines 2669/2768, functions 655/658, branches 1571/1792, MC/DC
+> 1774/2004 — and before that, from CI #1202: lines 2566/2665, functions
+> 621/624, branches 1557/1778, MC/DC 1692/1922.
 > **Every delta is fully covered on both sides** — the only measured surface
 > added between the two runs is `vmacros/coverage/deque_cover.c`, which reaches
 > 100% with zero justification rows, and no pre-existing file moved. The MC/DC
@@ -640,6 +651,25 @@ by methodology):
   closure, not a regression). The 3 missed outcomes are the
   documented ceiling and not counted as a coverage regression.
 
+- **bitset.h: 97.0% (130/134)** — the ceiling under MCDC-012. The 4
+  remaining outcomes are the justification rows recorded there; the
+  prover-load-bearing `bitset_pad` disjunct (VERIFY-020) means that file
+  must not be "simplified" to move this figure.
+
+- **lifetime.h: 50.0% (1/2)** — the ceiling under MCDC-013. The single
+  uncovered outcome is the `REGION_ID_STATIC` guard's TRUE leg in the token
+  generator, platform-dead on the CI runner. A justification row, not a
+  backlog item; it is what made VERIFY-021 the first entry to move the
+  aggregate downward.
+
+- **priority_queue.h: 98.8% (81/82)** — the ceiling under MCDC-014. The
+  single uncovered outcome is J1, `pq_swap_`'s `a == b` guard, dead by
+  construction since PQ-A made the heap helpers internal: no internal caller
+  passes equal indices. Reaching it would mean calling an internal symbol
+  from a test to move a number. This file reached 82/82 by tests first; the
+  rename then made one leg unreachable and the measurement followed the
+  code.
+
 Headers absent from the MC/DC table:
 
 `core/primitives/types.h`, `core/primitives/limits.h`,
@@ -766,6 +796,22 @@ elimination. The confirming fix followed: `vec_verify.h` contracted
 the standing 198-goal pin), and the acknowledged ratchet landed at CI
 #1247 (43a46b1, 2026-08-18), moving vec 198 → 196 and the pinned
 proved line 5231 / 5429 → 5271 / 5467.
+As of 2026-08-27 (CI #1266), bitset became the fifth driver-verified
+module (VERIFY-020), in-place contracts behind a thin interposition
+driver — though its job's gate was not wired until CI #1285, see the
+VERIFY-020 reading note. As of 2026-09-02 (CI #1275), `lifetime.h`'s
+token generator was verified at ladder level 4 and enforced (VERIFY-021).
+As of 2026-09-06 (CI #1285), VERIFY-023 gave ptr.h's four address helpers
+a result `ensures`: +6 goals in each of the seven units that include
+ptr.h, and 24 residuals in arena, pool, region and vec that had been
+recorded as arithmetic or call-site limits closed, their prior
+classifications corrected by dated reading notes. As of 2026-09-07 (CI
+#1290), priority_queue.h became the first data/-layer module verified in
+place with no driver (VERIFY-022), its comparator proved as a verified
+configuration over compare.h's 24 built-ins via a `calls` clause; pinned
+4513 / 4584 with 71 residuals by name, of which 6 are its own and 5 of
+those are memory.h's `regions_overlap` predicate stated by pointer order
+(VERIFY-024 candidate).
 
 | Header     | Functions | Proof obligations | Proved (auto)     | Unproved | Deviation    |
 |------------|-----------|-------------------|-------------------|----------|--------------|
@@ -894,7 +940,12 @@ inheritance goals, 28 on a fresh result(Bool, Error) instantiation
 carrying the full home contract set, and 5 deque-own (the swap cluster
 only) — with **zero core-substrate goals**, deque's include closure
 containing none of memory.h, ptr.h, slice.h, arena.h or checked.h.
-Class arithmetic: 438 + 64 + 196 + 67 = 765. result additionally
+Class arithmetic: 438 + 64 + 196 + 67 = 765. **Updated 2026-09-07:** the
+total is now 951 — 765 + 163 (bitset, VERIFY-020) − 48 (VERIFY-023 closed 8
+in arena and 16 more in pool, and the arena 8 were inherited by pool, region
+and vec: 8 + 24 + 8 + 8) + 71 (priority_queue, VERIFY-022: 43 inherited + 22
+result + 6 own). The per-class split in this paragraph was not recomputed;
+the per-module entries are the authoritative record. result additionally
 carries the union-model standing hypothesis (no goals; all
 union-member postconditions proved under a WP union model the tool
 itself flags — see VERIFY-015).
@@ -1343,7 +1394,7 @@ unprovable by construction — cites the coverage stream as its
 | 2026-08-18 | c427548 → 43a46b1 | #1246 → #1247 | v1.3.0  | —      | —         | —        | —      | vec F4 closure — **a goal removed, not reclassified**, and the last unpinned pair in the dataset eliminated. VERIFY-019-M had already closed VERIFY-018 F4 by *elimination*: with contracts held identical and the memory model verified changed, the `get_ok`/`get_err` pair had to be a contract-surface effect. This arc **demonstrates** it. `vec_verify.h` contracted 3 of the 17 emitted `result__Bool_Error_*` functions and `get_ok`/`get_err` were not among them, so nothing established `\valid(out)` and `-wp-rte`'s memory-access obligation for each union read had nothing to discharge it; contracting the two — shapes copied from `deque_verify.h`, no clause invented — removed **exactly** those two goals and nothing else. Measured at c427548 / #1246 (2h49m), a deliberately red run against the standing `5231 / 5429` + 198 pin per the job's rule that a goal flipping to Proved is a red run carrying good news; ratcheted at 43a46b1 / #1247 (3h08m) to `5271 / 5467` + 196 with the two `CHECKS` roll-call entries removed. Accounting closes with nothing unexplained: the two contracts add 38 goals of their own (each a `requires`, a default `assigns`, two behaviors, `complete`/`disjoint`), **all 38 prove**, and the two F4 goals flip — +38 total against +40 proved, −2 unproved. Zero Failed, Invalid or Stepout, so neither new contract is falsified by the implementation it describes. The pair was never a property of `result(Bool, Error)`, never a WP union-model artifact and not a memory-model emission: it was a precondition vec's driver could have stated and did not — **removable, not residual**. vec's fresh-result arm reads 20, not 22, from this commit; the 123-goal inherited arm and 91-goal core arm are untouched, the closure being subject-side only. No coverage change: `vec_verify.h` is a WP driver and is not in the coverage build. |
 | 2026-08-27 | f42841c → 16d0f0b | #1249 → #1266 | v1.3.0  | 96.5%  | 99.5%     | 88.4%    | 89.2%  | bitset — MC/DC gap closure + in-place ACSL + WP driver through enforcement (MCDC-012, VERIFY-020), both streams in one arc; **fifth driver-verified module, third data/-layer module**, and the first verified with **in-place contracts behind a thin interposition driver** rather than a Shape-B driver (`vmacros/vdrivers/bitset_verify.h` contracts none of bitset's functions; it exists only to interpose a contracted `option_usize` ahead of the header's own instantiation). **Measurement (MCDC-012)**: 109/126 → **122/126** at ee884fd/#1253 (thirteen outcomes driven: eleven `!bs->words` TRUE legs from a `Bitset b = {0}` in `test_uninitialised_bitset`, plus `find_next(prev>=capacity)` and `bitset_and`'s tail loop), four justified J1–J4 (`(x < capacity) ? x : NPOS` FALSE legs in find_first/find_next×2/find_last, dead by the padding invariant, `diag.h`:293 precedent). Local GCC was 13, so the change was validated on branch-taken as a proxy and predicted exactly four remaining untaken branches at the four lines that became J1–J4; CI matched. **Proof (VERIFY-020, report-only #1249 → enforced #1260 at 158 → ratcheted #1265 to 163 → re-confirmed #1266)**: `4839 / 5002`, exactly **163** unproved, **0 Failed/Invalid/Stepout** — 2 handler + 32 option_usize (inheritance) + 58 core substrate + **71 own**, the smallest own-residual set of any driver-verified module (vec 196, pool 119, region 114, arena 91, deque 67). Three results carry the entry. **(1) F4, specification-strength inheritance** — a residual class new to the campaign: every prior ceiling was PROVER weakness, this one is UPSTREAM SPECIFICATION weakness. `bits_popcount`/`ctz`/`clz` are range-only by written decision, so `bitset_count` cannot claim `<= capacity`, `is_full` is capped transitively, and `find_*` cannot claim minimality — a cap exactly one word wide, named at that width rather than gestured at. **(2) A clause redundant for the LOGIC can be load-bearing for the PROVER, found twice.** E1 (#1254) deleted `capacity % 64 == 0 ||` from `bitset_pad` as a simplification and took the CI runner down twice — `% 64` bounds the shift exponent syntactically, `bitset_rem(bs)` requires deriving the bound first, so the term became `x / 2^k` with k free: memory blow-up, which `-wp-timeout` cannot bound. F5 (#1264) then deleted a precondition **verified redundant beforehand** (`bitset_mut` already implies `words != \null`) and cost five `assert_rte_mem_access` goals; `bitset_not` is the control — only that one line changed, one goal lost. The second discovery was made with the first written down 300 lines above the edit. **(3) F2, real undefined behaviour**, demonstrated rather than argued: reverting only the four guards gives UBSan `load of null pointer of type 'u64'` then an ASan SEGV, on an ordinary `Bitset b = {0}`. Findings: **F1 fixed** (f18e72c — `BITSET_WORD_COUNT` wraps above `USIZE_MAX-63`; `capacity == USIZE_MAX` gives `word_count == 0`, init succeeds silently, every later index guard becomes vacuous; realistic trigger is an upstream `n - 1` underflow, not an absurd literal; initial disposition "live design question" was wrong and the measurement is what changed it). **F2 fixed** (61e1312, five functions not four — `bitset_assign` delegates and was exposed transitively). **F3 fixed** (19febec, header self-containedness). **F5 fixed** (61e1312, a vacuous null behavior found by scanning all 32 contracts for the signature, not by reading). Three refuted hypotheses are recorded with the method error behind them — archaeology on straight-line goals instead of measuring — corrected by contracting one loop (`bitset_not`) and reading the result. Two contracts deliberately NOT written: the as_bytes byte-level `\valid` (6 goals, would push a byte obligation onto every caller) and dropping `\separated` on and/or/xor (would leave the result unspecified). MISRA held at 53 throughout, briefly 54 when F1's guard tripped rule 12.1 (explicit precedence) and parenthesised at fad155a. Fixing F2 also moved a clang-analyzer null-deref from a suppressed header location into the test file where it is reported — the finding was always reachable, the same shape as the MISRA per-line masking note. |
 | 2026-09-02 | — | #1271 → #1275 | v1.3.0  | —      | —         | —        | 89.2%  | `lifetime.h` **enforced** (VERIFY-021): the token generator verified at ladder level 4 only, 4/4 with 0 unproved, name-identical at #1271/#1273/#1274, pinned at #1275. An instrument-integrity entry, not a module arc. MC/DC moved **down** to 1796/2014 (MCDC-013): `lifetime_test.c` compiles the generator into the coverage build and brings one platform-dead outcome into the denominator — the measurement got more honest, not less complete. Commit hash not recorded in this row; see VERIFY-021. |
-| 2026-09-05 → 09-07 | d0b6f2c → 63d6705 | #1280 → #1290 | v1.3.0  | 96.7%  | 99.6%     | 89.3%    | 89.9%  | priority_queue — MC/DC gap closure + PQ-A + in-place ACSL + WP through enforcement (MCDC-014, VERIFY-022), both streams in one arc; **fourth data/-layer module**, first verified **in place with no driver** (Shape A), and first whose core operation calls a caller-supplied function pointer. **Coverage** (d0b6f2c, #1280): 62/78 → 82/82 by twelve test gaps — including the large-element swap path, which had **zero executions** and was first misread as a justification row before being corrected — then 82/82 → 81/82 when PQ-A renamed the six heap helpers internal and made the self-swap leg dead by construction (J1); aggregate 1796/2014 → 1816/2018 → **1815/2018**. PQ-A's exposure was demonstrated, not argued: a client `pq_swap(&q, 0, 4)` broke the heap invariant silently and left an outstanding borrow validating against changed contents — failure-open, the VERIFY-021 mode. **WP** (#1281 → #1290, Typed+Cast, 41 functions): own residuals 199 → 170 → 143 → 144 → 18 → 7 → 6 over eight commits; three consecutive count predictions refuted before the job switched to named residual classes. The comparator call was an information horizon (~99 residuals downstream of `pq->cmp`), closed by `pq_cmp_` with a `calls` clause over compare.h's 24 built-ins — a **verified configuration**, nothing trusted; caller-supplied comparators are outside the proof. **F-WRAP** found by the prover: child-index arithmetic unguarded for `capacity > 2^63−1`, now bounded in `pq_wf`. Pinned **4513/4584, 71 by name** (43 memory.h + 22 result + 6 own) at #1289, enforced #1290 name-identical. Of the 6 own, 5 are memory.h's `regions_overlap` stated by pointer order — **VERIFY-024 candidate**. Run 2 of this arc is what exposed ptr.h's opaque address helpers and caused VERIFY-023 (next row). Docs pass same day; per-line MC/DC steps added for lifetime.h and priority_queue.h. |
+| 2026-09-05 → 09-07 | d0b6f2c → 63d6705 | #1280 → #1290 | v1.3.0  | 96.7%  | 99.6%     | 89.3%    | 89.9%  | priority_queue — MC/DC gap closure + PQ-A + in-place ACSL + WP through enforcement (MCDC-014, VERIFY-022), both streams in one arc; **fourth data/-layer module** and the first data/-layer module verified **in place with no driver** (Shape A); its core operation calls a caller-supplied function pointer from inside its loops. **Coverage** (d0b6f2c, #1280): 62/78 → 82/82 by twelve test gaps — including the large-element swap path, which had **zero executions** and was first misread as a justification row before being corrected — then 82/82 → 81/82 when PQ-A renamed the six heap helpers internal and made the self-swap leg dead by construction (J1); aggregate 1796/2014 → 1816/2018 → **1815/2018**. PQ-A's exposure was demonstrated, not argued: a client `pq_swap(&q, 0, 4)` broke the heap invariant silently and left an outstanding borrow validating against changed contents — failure-open, the VERIFY-021 mode. **WP** (#1281 → #1290, Typed+Cast, 41 functions): own residuals 199 → 170 → 143 → 144 → 18 → 7 → 6 over eight commits; three consecutive count predictions refuted before the job switched to named residual classes. The comparator call was an information horizon (~99 residuals downstream of `pq->cmp`), closed by `pq_cmp_` with a `calls` clause over compare.h's 24 built-ins — a **verified configuration**, nothing trusted; caller-supplied comparators are outside the proof. **F-WRAP** found by the prover: child-index arithmetic unguarded for `capacity > 2^63−1`, now bounded in `pq_wf`. Pinned **4513/4584, 71 by name** (43 memory.h + 22 result + 6 own) at #1289, enforced #1290 name-identical. Of the 6 own, 5 are memory.h's `regions_overlap` stated by pointer order — **VERIFY-024 candidate**. Run 2 of this arc is what exposed ptr.h's opaque address helpers and caused VERIFY-023 (next row). Docs pass followed (2026-09-07 to 09-09), with per-line MC/DC steps added for lifetime.h and priority_queue.h. |
 | 2026-09-06 | b79a51f | #1284 → #1285 | v1.3.0  | 96.7%  | 99.6%     | 89.3%    | 89.9%  | **VERIFY-023**: `ptr_offset`/`ptr_offset_const`/`ptr_elem`/`ptr_elem_const` gain an `ensures` stating their result. +6 goals in every TU including ptr.h (not the predicted +4: two of the four have a null branch and `-wp-split` fragments them). **24 pinned residuals closed** across arena (8), pool (16 own + 8), region (8), vec (8) — every one previously classified as arithmetic or call-site limits; all were the callee's opaque return address. Eight pins ratcheted in one commit. Also found: `frama-c-bitset` had no terminal exit and could not fail the build since #1259 — **enforcement of bitset begins here**; arena-32's embedded baseline was a stale copy of arena's pin. Coverage unchanged. |
 
 ---

@@ -14,7 +14,7 @@ Combined verification status across all annotated headers:
 | **Functions**        | 412 annotated and verified (371 + priority_queue.h's 41; lifetime.h's 1 counted separately) |
 | **Total obligations**| 41933 (summed over the 18 verification units; substrate goals are re-emitted in each downstream unit, so this counts goal-instances, not distinct obligations) |
 | **Proved automatic** | 40982 (97.73%)                                                                 |
-| **Unproved**         | 928 (all documented; see per-header sections)                                  |
+| **Unproved**         | 951 (all documented; see per-header sections)                                  |
 
 *Corrected 2026-08-21.* This card previously read 15 / 315 / 30599 / 29899 /
 700 — the state before deque was verified and before the vec F4 confirming
@@ -51,9 +51,9 @@ reading note) adds a seventeenth unit: +32 functions, +5008 obligations,
 (4) **priority_queue.h** (VERIFY-022; enforced CI #1290 / 63d6705,
 name-identical to #1289) adds an eighteenth unit: +41 functions, +4584
 obligations, +4513 proved, +71 unproved. The first in-place data/-layer
-module and the first whose core operation calls a caller-supplied function
-pointer; the comparator is proved as a verified configuration over compare.h's
-24 built-ins.
+module; its core operation calls a caller-supplied function pointer from
+inside its loops, and the comparator is proved as a verified configuration
+over compare.h's 24 built-ins.
 
 (5) **VERIFY-023** (CI #1285) moved seven existing units without adding one:
 ptr.h's four address helpers gained an `ensures` each, every TU including
@@ -62,9 +62,11 @@ been recorded as arithmetic or call-site limits closed. Net: +42 obligations,
 +90 proved, −48 unproved.
 
 Arithmetic: 32305 + 5002 = 37307; 31540 + 4839 = 36379;
-765 + 163 = 928. Figures above are the enforced CI pins at HEAD
-(16d0f0b, CI #1266), and match the master table in
-`docs/traceability.md`.
+765 + 163 = 928; then 37307 + 42 + 4584 = 41933; 36379 + 90 + 4513 =
+40982; 928 − 48 + 71 = 951. Figures above are the enforced CI pins at
+HEAD (63d6705, CI #1290), and match the master table in
+`docs/traceability.md` (whose totals run 4 higher on obligations and
+proved because that table also carries lifetime.h's 4/4).
 
 The slice.h baseline (367 / 390) carries a higher residual fraction
 than the four primitives headers because it is the first Canon-C header
@@ -3426,9 +3428,11 @@ coverage-stream record.
 | **CI artifact**        | `wp-proof-priority-queue`                       |
 | **Job runtime**        | ~2h45m                                          |
 
-priority_queue.h is the **first in-place (Shape A) data/-layer module** and
-the first Canon-C module whose central operation calls a **caller-supplied
-function pointer** from inside its loops. That call was, until commit 5, an
+priority_queue.h is the **first in-place (Shape A) data/-layer module**. Its
+central operation calls a **caller-supplied function pointer** from inside
+its loops — region.h and the option/result combinators call function
+pointers too, but as their last act; here the rest of the function depends on
+what the call might have changed. That call was, until commit 5, an
 information horizon: WP has no contract for an unknown callee, so everything
 after `pq->cmp(...)` began with the queue's fields unknown, and ~99 of the
 run-4 residuals were downstream of it.
@@ -3586,7 +3590,7 @@ discipline) recorded for deque.
 |--------------|------------------|-----------|------------------------------------------------------------------------|
 | vec (driver) | ✅ Verified  | 5285/5473 | Third driver-verified Shape-B module, first data/-layer module, first driver on Typed+Cast (VERIFY-018, enforced CI #1154; ratcheted CI #1202 and CI #1247/43a46b1 for the F4 closure; baseline CI #1152; report-only #1150–#1151): 37 generated functions via the DEFINE_VEC_STRUCTS/FUNCTIONS split (F3); 123 inherited byte-identically (largest TU to date; 91 core = arena.h's set verbatim, 32 option mod prefix) + 73 subject-side (53 own across 4 categories incl. the new macro-body-loop class (g) forward-flagged for deque, + 20 fresh result(Bool, Error) instantiation, the F4 pair having been removed by contract at CI #1247 — VERIFY-018 Correction note 2026-07-16 and DEMONSTRATED note 2026-08-17); zero own fn-pointer-dispatch goals; MCDC-010 (155/158 ceiling, U1/U2 WP-corroborated infeasible + U3 heap-environmental; third attribution variant); facade views measured but not yet WP-driven (follow-up); `_range`/`_fmt` extensions deferred |
 | deque (driver) | ✅ Verified  | 1601/1668 | Fourth driver-verified Shape-B module, second data/-layer module, first data/-layer driver on plain **Typed** (VERIFY-019, enforced CI #1238; baseline #1234; name-stable #1237; re-confirmed #1239–#1240): 24 generated functions via the DEFINE_DEQUE_STRUCTS/FUNCTIONS split (VERIFY-018 F3's checklist item, landed CI #1225 with byte-identical expansion verified first); **zero core-substrate inheritance** — the first module whose inherited surface is SMALLER than its predecessor's, composability tested in the converse direction; 2 handler + 32 option (inheritance) + 28 fresh result(Bool, Error) + 5 own (swap cluster only); class (g) macro-body-loop **withdrawn** before the run (a ring shifts nothing); **memory-model invariant** (VERIFY-019-M); closed VERIFY-018 F4; MCDC-011 (82/82, 100%, zero justification rows) |
-| priority_queue.h | ✅ Verified | 4513/4584 | First in-place (Shape A) data/-layer module and first whose core operation calls a caller-supplied function pointer. Comparator proved as a **verified configuration**: a `calls` clause over compare.h's 24 built-ins makes `pq_cmp_`'s frame a theorem, not an axiom; caller-supplied comparators are outside the proof. Heap order NOT claimed (built-ins ensure only -1..1). 71 residuals: 43 inherited + 22 result + 6 own (1 `\valid_function`, 5 memory.h `regions_overlap`-by-pointer-order — VERIFY-024 candidate). Enforced at CI #1290, name-identical to #1289 (VERIFY-022). MC/DC 81/82, graduated to the per-line allowlist (MCDC-014). |
+| priority_queue.h | ✅ Verified | 4513/4584 | First in-place (Shape A) data/-layer module; its core operation calls a caller-supplied function pointer from inside its loops. Comparator proved as a **verified configuration**: a `calls` clause over compare.h's 24 built-ins makes `pq_cmp_`'s frame a theorem, not an axiom; caller-supplied comparators are outside the proof. Heap order NOT claimed (built-ins ensure only -1..1). 71 residuals: 43 inherited + 22 result + 6 own (1 `\valid_function`, 5 memory.h `regions_overlap`-by-pointer-order — VERIFY-024 candidate). Enforced at CI #1290, name-identical to #1289 (VERIFY-022). MC/DC 81/82, graduated to the per-line allowlist (MCDC-014). |
 | hashmap      | Planned          |           | Shape A (confirmed) — in-place surface via `hashmap_impl.h`, no cover TU needed |
 
 ### algo/ (longer term)

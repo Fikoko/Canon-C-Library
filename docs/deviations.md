@@ -309,8 +309,9 @@ context for any future attempt to strengthen ptr.h's contracts.
 quotes as `1943/1953` is now **1949/1959**: VERIFY-023 gave `ptr_offset`,
 `ptr_offset_const`, `ptr_elem` and `ptr_elem_const` an `ensures` stating the
 address they return, +6 goals in every TU that includes ptr.h, all proved. The
-10 residuals are unchanged by name. The ptr.h-own baseline of 1729/1739 is
-unaffected in its residual set; its total is 1745 with the same 10.
+10 residuals are unchanged by name. The ptr.h-own figure of 1729/1739 was not
+re-measured; the change is +6 goals, all proved, so its residual set is
+unaffected.
 
 ## VERIFY-007: WP Limitations on libc Boundary (slice.h)
 
@@ -4046,9 +4047,12 @@ here and nothing to measure about composition.
 | **Category**   | Formal verification completeness |
 | **Enforcement**| **ENFORCED at CI #1290.** Pinned `4513 / 4584`; 71 unproved by set equality: 43 inherited from memory.h (read from the memory job's own list at run time so the two pins cannot drift apart silently), 22 result(bool, Error), 6 own. Failed never pinnable. Terminal `exit 1` present — the bitset lesson. |
 
-**Description**: `priority_queue.h` is the first Canon-C module whose central
-operation calls a **caller-supplied function pointer** — the comparator — from
-inside its loops. That single fact shaped the whole arc. WP has no contract
+**Description**: `priority_queue.h`'s central operation calls a
+**caller-supplied function pointer** — the comparator — from inside its loops.
+Other verified modules call function pointers too (region.h's cleanup hooks,
+option's and result's combinators), but there the call is the last thing the
+function does; here everything after it depends on state the call could have
+changed. That single fact shaped the whole arc. WP has no contract
 for an unknown callee, so every statement after `pq->cmp(...)` began with
 `pq->data`, `pq->len` and `pq->elem_size` unknown, and every later obligation
 in `pq_sift_up_` and `pq_sift_down_` failed whatever its own merit. Until
@@ -4160,8 +4164,8 @@ requires, and that copy was not updated either time. Regressed 0 → 4 → 5.
 Commit 5 split `pq_wf_buf` out so heapify requires the shared predicate. One
 definition, two names.
 
-**Three small omissions of my own**, each caught by the class tally within a
-run of being made: `pop_raw` read `pq->len` before requiring readability;
+**Three small omissions in the contracts**, each caught by the class tally
+within a run of being made: `pop_raw` read `pq->len` before requiring readability;
 `pq_peek`'s `none` branch with `out == NULL` still ran `peek_raw`'s nonempty
 behaviour without `pq_wf`; `pq_pop` did not carry the readability requires
 its callee had gained.
@@ -4193,7 +4197,8 @@ listed with the other four because the predicate shape is the blocker first.
 ### Method notes recorded for the next arc
 
 Every wrong count in this arc came from naming a cause that fit the symptom
-without tracing it in the log. Every right call — the `calls` clause, the
+without tracing it in the log — the same error VERIFY-023 found in the
+VERIFY-009/-010 records, made here in real time. Every right call — the `calls` clause, the
 constructor interposition, F-WRAP — came from reading a contract or a goal
 name and checking what it actually said. Three additional rules now apply to
 this header and should apply to the next: ACSL predicates must be defined
@@ -4287,8 +4292,9 @@ name-stable identically. The record was wrong for months and stayed wrong
 because a wrong explanation is as stable as a right one. It surfaced only
 because a fourth module hit the same wall hard enough that someone read
 `ptr_elem`'s contract. Reading notes dated 2026-09-07 are appended to
-VERIFY-009, -010, -011 and -018 below; the original text is left standing so
-the error is visible.
+VERIFY-009, -010, -011 and -018 above (and, for the +6 with no set change, to
+VERIFY-006 and -008; for the gate, to -020); the original text is left
+standing so the error is visible.
 
 ### Two collateral findings, both about the workflow rather than the code
 
@@ -6900,17 +6906,18 @@ host is load-bearing for the PROOF.
 | **Category**   | Coverage completeness; API finding |
 
 **Description**: `priority_queue.h` entered this arc at 79.5% MC/DC with no
-enumeration of what the missing 16 outcomes were. The enumeration — produced
-by the per-line report the coverage job now emits for graduated files — turned
-"79.5%" into twelve test gaps, one zero-execution code path, and one API
-finding. Nothing was justified away.
+enumeration of what the missing 16 outcomes were. The enumeration — a per-line
+`gcov-14 --conditions` dump run **locally**, because at the time no CI step
+printed it for this file (the coverage job's per-line steps covered fourteen
+other files; this one was added with this entry) — turned "79.5%" into twelve
+test gaps, one zero-execution code path, and one API finding. Nothing was
+justified away.
 
 ### Enumeration, then disposition
 
-Twelve of the sixteen misses were ordinary test gaps: error paths of
-`pq_push_result` and `pq_remove_at_result`, the `out == NULL` legs of `pq_pop`
-and `pq_peek`, `pq_heapify` with `len > capacity`, and both branches of the
-`as_bytes` / `as_cbytes` empty checks. Each got a test; each moved.
+Twelve of the misses were ordinary test gaps — outcomes a straightforward
+test could reach and no test did. Each got a test; each moved. The per-line
+dump, not this entry, is the record of which lines they were.
 
 One miss was a whole path: **the large-element swap loop had never
 executed.** `pq_swap_` uses `mem_swap` for elements up to `CANON_MEM_SWAP_MAX`
@@ -6919,12 +6926,16 @@ elements. The first reading of this miss was that it was a justification row —
 "no realistic element is that large." That reading was **wrong** and was
 corrected before it reached the docs: the path is reachable by any caller with
 a large element, it is the only code that runs for them, and it had zero
-executions. A test with a 516-byte element now drives it, and the correction is
-recorded here because the misreading is exactly the kind the justification
-mechanism invites.
+executions. `test_large_elements` now drives it with a 516-byte element (`PqBig`: 512
+bytes of padding plus an `int` key, asserted larger than `CANON_MEM_SWAP_MAX`
+so the test cannot become vacuous), and the correction is recorded here
+because the misreading is exactly the kind the justification mechanism
+invites.
 
-The aggregate moved 1796/2014 → 1816/2018: +20 outcomes covered, +4 in the
-denominator from the new tests reaching previously uncompiled conditions.
+The aggregate moved 1796/2014 → 1816/2018: +20 outcomes covered, and the
+denominator grew by 4 (78 → 82 for this file) — gcov's condition set is
+measured over what the test binary instantiates, and the new tests reach
+functions the old suite never called.
 
 ### The justification row that IS real — and why coverage then went DOWN
 
@@ -6965,10 +6976,11 @@ mutates contents **without** bumping the id: an outstanding borrow keeps
 validating against a queue that changed underneath it. The instrument fails
 OPEN — the mode VERIFY-021 was written to prevent in the token generator.
 
-Blast radius was checked before renaming, not assumed: zero callers outside
-the header, none in test/, none in docs/. No deprecation shim, because nothing
-to deprecate was found. The header change was verified to be
-rename-plus-comments only by reversing the rename and diffing.
+Blast radius was checked before renaming, not assumed: no callers outside
+the header except one in test/ — `test_self_swap_is_a_noop`, which called
+`pq_swap` directly and was deleted rather than adapted (J1 above). No
+deprecation shim, because nothing else to deprecate was found. The shipped
+change is the rename plus comments.
 
 ### Graduation — what exists and what does not
 
