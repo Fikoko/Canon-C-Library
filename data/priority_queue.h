@@ -559,9 +559,11 @@ static inline usize pq_right_child_(usize i) { return (2u * i) + 2u; }
  * fails OPEN, the same mode VERIFY-021 was written to prevent in the token
  * generator.
  *
- * Verified before renaming: zero callers outside this header - none in
- * test/, none in other headers, no mention in docs/. The rename is
- * therefore contained, and no deprecation shim is provided.
+ * Verified before renaming: one caller outside this header — the test
+ * test_self_swap_is_a_noop in test/, which called pq_swap directly and was
+ * deleted rather than adapted (see MCDC-014 in docs/deviations.md). None in
+ * other headers. The rename is therefore contained, and no deprecation shim
+ * is provided.
  *
  * Consequence for coverage: the `a == b` early return is now dead by
  * construction. pq_sift_down_ only calls this when smallest != idx, and
